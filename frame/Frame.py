@@ -7,6 +7,7 @@ class Frame:
     def __init__(self, id_=0, parameters=None):
         self.cap = self.open(id_)
         self.K, self.D = self.load_coefficients(parameters)
+        self.frame = None
 
     @staticmethod
     def load_coefficients(path):
@@ -20,18 +21,13 @@ class Frame:
 
     @staticmethod
     def open(id_):
-        cap = cv2.VideoCapture(id_)
-        if not cap.isOpened():
-            print('Unable to read camera feed')
-        return cap
+        return None
 
     def close(self):
-        if self.cap.isOpened():
-            self.cap.release()
+        pass
 
     def frame(self):
-        _, frame = self.cap.read()
-        return frame
+        return self.frame
 
     def undistorted_frame(self):
         pass
