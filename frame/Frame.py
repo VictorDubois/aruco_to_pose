@@ -5,9 +5,8 @@ import os
 
 class Frame:
     def __init__(self, id_=0, parameters=None):
-        self.cap = self.open(id_)
         self.K, self.D = self.load_coefficients(parameters)
-        self.frame = None
+        self.grabbed_frame = None
 
     @staticmethod
     def load_coefficients(path):
@@ -27,7 +26,7 @@ class Frame:
         pass
 
     def frame(self):
-        return self.frame
+        return self.grabbed_frame
 
     def undistorted_frame(self):
         pass
