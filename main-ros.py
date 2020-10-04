@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from frame import FisheyeFrame
 from detection import Detector
 from coordinate import Transforms
@@ -13,7 +15,9 @@ from scipy.spatial.transform import Rotation
 
 class ArucoPublisherNode:
     def __init__(self):
-        self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters='resources/parameters_fisheye_pi.txt', balance=1)
+        path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi.txt')
+        rospy.loginfo(f"loading camera calibration from {path_calibration_camera}")
+        self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=1)
         self.d = Detector.Detector()
         self.r_origin, self.t_origin = [[0,0,0]], [[0,0,0]]
         self.origin_id = 42

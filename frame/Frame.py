@@ -11,6 +11,8 @@ class Frame:
     @staticmethod
     def load_coefficients(path):
         K, D, frame_size = None, None, None
+        if not os.path.exists(path):
+            raise Exception(f"Cannot load camera calibration from {path}")
         if path is not None:
             cv_file = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
             K = cv_file.getNode("K").mat()
