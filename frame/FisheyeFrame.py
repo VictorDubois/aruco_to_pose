@@ -13,7 +13,7 @@ class FisheyeFrame(Frame):
     def init_map(self):
         map1, map2 = None, None
         if self.K is not None and self.D is not None:
-            w, h = int(self.cap.get(3)), int(self.cap.get(4))
+            w, h = int(self.frame_size[0]), int(self.frame_size[1])
             map1, map2 = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3),
                                                              self.K, (w, h), cv2.CV_16SC2)
         return map1, map2

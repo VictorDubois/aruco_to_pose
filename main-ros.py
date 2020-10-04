@@ -1,8 +1,6 @@
-
-from plateau import Plateau
-from frame import PinholeFrame
+from frame import FisheyeFrame
 from detection import Detector
-from coordinate.transforms import *
+from coordinate import Transforms
 import sys
 
 import cv2
@@ -10,123 +8,90 @@ import rospy
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import PoseStamped
 import numpy as np
+from scipy.spatial.transform import Rotation
 
-class SystemNode:
+
+class ArucoPublisherNode:
     def __init__(self):
-        self.p = Plateau.Plateau((600, 400), 'resources/img', 200, 42, np.array([[300, 250, 0]]))
-        self.f = PinholeFrame.PinholeFrame(id_=0, parameters='resources/parameters_webcam_victor.txt')
+        self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters='resources/parameters_fisheye_pi.txt', balance=1)
         self.d = Detector.Detector()
-        self.Rref, self.Tref = None, None
+        self.r_origin, self.t_origin = [[0,0,0]], [[0,0,0]]
+        self.origin_id = 42
         self.initialized = False
+        self.marker_sizes = {0: 0.07, 1: 0.07, 2: 0.07, 3: 0.07, 4: 0.07, 5: 0.07, 6: 0.07, 7: 0.07, 8: 0.07, 9: 0.07,
+                             10: 0.07, 42: 0.10}
         self.image_pub = rospy.Publisher("/output/image_raw/compressed",
-                                         CompressedImage)
+                                         CompressedImage, queue_size=1)
         self.robots_pose_pub = []
         for i in range(0, 10):
             self.robots_pose_pub.append(rospy.Publisher(f"/pose_robots/{i}", PoseStamped, queue_size=1))
 
         # subscribed Topic
         self.img_subscriber = rospy.Subscriber("/raspicam_node/image/compressed",
-                                           CompressedImage, self.callback, queue_size=1)
-
-    def try_initialize(self):
-        cv2.namedWindow('display')
-        cv2.setNumThreads(4)
-        im = self.f.undistorted_frame()
-        cv2.imshow('display', im.copy())
-        cor, ids = self.d.detect(im, self.f.K, self.f.D)
-
-        poses = {}
-        if len(cor) > 0:
-            for i in range(len(ids)):
-                poses[ids[i][0]] = self.d.find_marker_pose(cor[i], self.f.K, self.f.D, self.p.markers[ids[i][0]].size)
-
-        if poses.get(self.p.origin_id):
-            self.Rref, self.Tref = poses[self.p.origin_id]
-            self.initialized = True
-            print('Initialized!')
-        else:
-            print("Init failed")
-        return self.initialized
+                                               CompressedImage, self.callback, queue_size=1)
 
     def core(self, img):
         self.f.grabbed_frame = img
-        if not self.initialized:
-            self.try_initialize()
-        else:
-            cv2.namedWindow('display')
-            cv2.setNumThreads(4)
-            self.p.update()
-            im = self.f.undistorted_frame()
-            cor, ids = self.d.detect(im, self.f.K, self.f.D)
+        cv2.setNumThreads(4)
+        img = self.f.undistorted_frame()
+        corners, ids = self.d.detect(img)
+        poses = {}
 
-            poses = {}
-            if len(cor) > 0:
-                for i in range(len(ids)):
-                    poses[ids[i][0]] = self.d.find_marker_pose(cor[i], self.f.K, self.f.D,
-                                                               self.p.markers[ids[i][0]].size)
+        if ids is not None:
+            for aruco_id, corner in zip(ids, corners):
+                poses[aruco_id[0]] = self.d.find_marker_pose(corner, self.f.K, self.f.D, self.marker_sizes[aruco_id[0]])
 
-            disp = im.copy()
-            disp = cv2.aruco.drawDetectedMarkers(disp, cor, ids)
-            cv2.imshow('display', disp.copy())
+            img = cv2.aruco.drawDetectedMarkers(img, corners, ids)
 
-            #### Create CompressedIamge ####
-            msg = CompressedImage()
-            msg.header.stamp = rospy.Time.now()
-            msg.format = "jpeg"
-            msg.data = np.array(cv2.imencode('.jpg', disp)[1]).tostring()
-            # Publish new image
-            self.image_pub.publish(msg)
+        #### Create CompressedIamge ####
+        msg = CompressedImage()
+        msg.header.stamp = rospy.Time.now()
+        msg.format = "jpeg"
+        msg.data = np.array(cv2.imencode('.jpg', img)[1]).tostring()
+        # Publish new image
+        self.image_pub.publish(msg)
 
-            if poses.get(self.p.origin_id):
-                self.Rref, self.Tref = poses[self.p.origin_id]
-            posrot = {}
-            ids__ = []
-            for id in poses:
-                if poses.get(id) and id != self.p.origin_id:
-                    ids__.append(id)
-                    R, T = poses[id]
-                    Ror, Tor = marker_to_marker(self.Rref, self.Tref, R, T)
-                    posrot[id] = plateau_3D_to_plateau_2D(Ror, Tor, self.p.center, 43)
-                    if id < 10:
-                        print(poses[id])
-                        pose_msg = PoseStamped()
-                        pose_msg.header.frame_id = "world"
-                        pose_msg.header.stamp = rospy.Time.now()
-                        pose_msg.pose.position.x = T[0][0]
-                        pose_msg.pose.position.y = T[0][1]
-                        pose_msg.pose.position.z = T[0][2]
-                            
-                        print(f"publishing pose for robot {id}")
-                        self.robots_pose_pub[id].publish(pose_msg)
+        if poses.get(self.origin_id):
+            self.r_origin, self.t_origin = poses[self.origin_id]
 
+        for aruco_id in poses:
+            rotation, translation = poses[aruco_id]
+            rotation, translation = Transforms.marker_to_marker(self.r_origin, self.t_origin, rotation, translation)
+            r = Rotation.from_matrix(rotation)
 
-            self.p.update(ids__, posrot)
-
-
+            if aruco_id < 10:
+                pose_msg = PoseStamped()
+                pose_msg.header.frame_id = "world"
+                pose_msg.header.stamp = rospy.Time.now()
+                pose_msg.pose.position.x = translation[0][0]
+                pose_msg.pose.position.y = translation[1][0]
+                pose_msg.pose.position.z = translation[2][0]
+                quat = r.as_quat()
+                pose_msg.pose.orientation.x = quat[0]
+                pose_msg.pose.orientation.y = quat[1]
+                pose_msg.pose.orientation.z = quat[2]
+                pose_msg.pose.orientation.w = quat[3]
+                self.robots_pose_pub[aruco_id].publish(pose_msg)
 
     def stop(self):
         self.f.close()
-        cv2.destroyAllWindows()
 
     def callback(self, ros_data):
-        #### direct conversion to CV2 ####
         np_arr = np.fromstring(ros_data.data, np.uint8)
         image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         self.core(image_np)
 
 
-
-
 def main(args):
-    '''Initializes and cleanup ros node'''
-    rospy.init_node('image_feature', anonymous=True)
-    ic = SystemNode()
+    """ Initializes and cleanup ros node """
+    rospy.init_node('aruco_pose_detector', anonymous=True)
+    ArucoPublisherNode()
     try:
         rospy.spin()
     except KeyboardInterrupt:
-        print
-        "Shutting down ROS Image feature detector module"
+        print("Shutting down ROS Image feature detector module")
     cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     main(sys.argv)
