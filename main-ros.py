@@ -41,15 +41,15 @@ class ArucoPublisherNode:
             for aruco_id, corner in zip(ids, corners):
                 poses[aruco_id[0]] = self.d.find_marker_pose(corner, self.f.K, self.f.D, self.marker_sizes[aruco_id[0]])
 
+        if self.image_pub.get_num_connections() > 0:
             img = cv2.aruco.drawDetectedMarkers(img, corners, ids)
-
-        #### Create CompressedIamge ####
-        msg = CompressedImage()
-        msg.header.stamp = rospy.Time.now()
-        msg.format = "jpeg"
-        msg.data = np.array(cv2.imencode('.jpg', img)[1]).tostring()
-        # Publish new image
-        self.image_pub.publish(msg)
+            #### Create CompressedIamge ####
+            msg = CompressedImage()
+            msg.header.stamp = rospy.Time.now()
+            msg.format = "jpeg"
+            msg.data = np.array(cv2.imencode('.jpg', img)[1]).tostring()
+            # Publish new image
+            self.image_pub.publish(msg)
 
         if poses.get(self.origin_id):
             self.r_origin, self.t_origin = poses[self.origin_id]
