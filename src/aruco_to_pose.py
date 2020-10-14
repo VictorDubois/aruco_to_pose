@@ -17,14 +17,14 @@ class ArucoPublisherNode:
     def __init__(self):
         path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi.txt')
         rospy.loginfo(f"loading camera calibration from {path_calibration_camera}")
-        self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=0.6)
+        self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=0.5)
         self.d = Detector.Detector()
         self.r_origin, self.t_origin = [[0,0,0]], [[0,0,0]]
         self.origin_id = 42
         self.initialized = False
         self.marker_sizes = {0: 0.07, 1: 0.07, 2: 0.07, 3: 0.07, 4: 0.07, 5: 0.07, 6: 0.07, 7: 0.07, 8: 0.07, 9: 0.07,
                              10: 0.07, 42: 0.10}
-        self.image_pub = rospy.Publisher("/aruco_to_pose/debug/compressed",
+        self.image_pub_undistort = rospy.Publisher("/aruco_to_pose/debug/undistort/compressed",
                                          CompressedImage, queue_size=1)
         self.robots_pose_pub = []
         for i in range(0, 11):
@@ -34,29 +34,29 @@ class ArucoPublisherNode:
         self.img_subscriber = rospy.Subscriber("/camera/image/compressed",
                                                CompressedImage, self.callback, queue_size=1)
 
-    def core(self, img):
-        self.f.grabbed_frame = img
+    def core(self, distort):
+        self.f.grabbed_frame = distort
         cv2.setNumThreads(4)
-        #img = self.f.undistorted_scaled_frame()
+        img = self.f.undistorted_scaled_frame()
         corners, ids = self.d.detect(img)
         poses = {}
 
         if ids is not None:
             for aruco_id, corner in zip(ids, corners):
                 if aruco_id[0] in self.marker_sizes:
-                    poses[aruco_id[0]] = self.d.find_marker_pose(corner, self.f.K, self.f.D, self.marker_sizes[aruco_id[0]])
+                    poses[aruco_id[0]] = self.d.find_marker_pose(corner, self.f.new_K, np.array([]), self.marker_sizes[aruco_id[0]])
 
-        if self.image_pub.get_num_connections() > 0:
+        if self.image_pub_undistort.get_num_connections() > 0:
             img = cv2.aruco.drawDetectedMarkers(img, corners, ids)
             for pose in poses.values():
-                img = cv2.aruco.drawAxis(img, self.f.K, self.f.D, pose[0], pose[1], 0.4)
+                img = cv2.aruco.drawAxis(img, self.f.new_K, np.array([]), pose[0], pose[1], 0.4)
             #### Create CompressedIamge ####
             msg = CompressedImage()
             msg.header.stamp = rospy.Time.now()
             msg.format = "jpeg"
             msg.data = np.array(cv2.imencode('.jpg', img)[1]).tostring()
             # Publish new image
-            self.image_pub.publish(msg)
+            self.image_pub_undistort.publish(msg)
 
         if poses.get(self.origin_id):
             self.r_origin, self.t_origin = poses[self.origin_id]
@@ -68,7 +68,7 @@ class ArucoPublisherNode:
 
             if aruco_id < 11:
                 pose_msg = PoseStamped()
-                pose_msg.header.frame_id = "world"
+                pose_msg.header.frame_id = "aruco"
                 pose_msg.header.stamp = rospy.Time.now()
                 pose_msg.pose.position.x = translation[0][0]
                 pose_msg.pose.position.y = translation[1][0]

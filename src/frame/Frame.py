@@ -6,6 +6,7 @@ import os
 class Frame:
     def __init__(self, id_=0, parameters=None):
         self.K, self.D, self.frame_size = self.load_coefficients(parameters)
+        self.frame_size = (int(self.frame_size[0][0]), int(self.frame_size[1][0]))
         self.grabbed_frame = None
 
     @staticmethod
