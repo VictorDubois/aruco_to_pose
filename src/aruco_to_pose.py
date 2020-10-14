@@ -17,7 +17,7 @@ class ArucoPublisherNode:
     def __init__(self):
         path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi.txt')
         rospy.loginfo(f"loading camera calibration from {path_calibration_camera}")
-        self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=1)
+        self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=0.6)
         self.d = Detector.Detector()
         self.r_origin, self.t_origin = [[0,0,0]], [[0,0,0]]
         self.origin_id = 42
@@ -27,7 +27,7 @@ class ArucoPublisherNode:
         self.image_pub = rospy.Publisher("/aruco_to_pose/debug/compressed",
                                          CompressedImage, queue_size=1)
         self.robots_pose_pub = []
-        for i in range(0, 10):
+        for i in range(0, 11):
             self.robots_pose_pub.append(rospy.Publisher(f"/pose_robots/{i}", PoseStamped, queue_size=1))
 
         # subscribed Topic
@@ -37,16 +37,19 @@ class ArucoPublisherNode:
     def core(self, img):
         self.f.grabbed_frame = img
         cv2.setNumThreads(4)
-        img = self.f.undistorted_frame()
+        #img = self.f.undistorted_scaled_frame()
         corners, ids = self.d.detect(img)
         poses = {}
 
         if ids is not None:
             for aruco_id, corner in zip(ids, corners):
-                poses[aruco_id[0]] = self.d.find_marker_pose(corner, self.f.K, self.f.D, self.marker_sizes[aruco_id[0]])
+                if aruco_id[0] in self.marker_sizes:
+                    poses[aruco_id[0]] = self.d.find_marker_pose(corner, self.f.K, self.f.D, self.marker_sizes[aruco_id[0]])
 
         if self.image_pub.get_num_connections() > 0:
             img = cv2.aruco.drawDetectedMarkers(img, corners, ids)
+            for pose in poses.values():
+                img = cv2.aruco.drawAxis(img, self.f.K, self.f.D, pose[0], pose[1], 0.4)
             #### Create CompressedIamge ####
             msg = CompressedImage()
             msg.header.stamp = rospy.Time.now()
@@ -63,7 +66,7 @@ class ArucoPublisherNode:
             rotation, translation = Transforms.marker_to_marker(self.r_origin, self.t_origin, rotation, translation)
             r = Rotation.from_matrix(rotation)
 
-            if aruco_id < 10:
+            if aruco_id < 11:
                 pose_msg = PoseStamped()
                 pose_msg.header.frame_id = "world"
                 pose_msg.header.stamp = rospy.Time.now()

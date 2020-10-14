@@ -5,7 +5,7 @@ import numpy as np
 
 
 class FisheyeFrame(Frame):
-    def __init__(self, balance=0.0, id_=0, parameters=None):
+    def __init__(self, balance=1.0, id_=0, parameters=None):
         super().__init__(id_, parameters)
         self.map1, self.map2 = self.init_map()
         self.balance = balance
@@ -39,8 +39,8 @@ class FisheyeFrame(Frame):
         scaled_K[2][2] = 1.0  # Except that K[2][2] is always 1.0
 
         # This is how scaled_K, dim2 and balance are used to determine the final K used to un-distort image. OpenCV document failed to make this clear!
-        new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(scaled_K, self.D, dim2, np.eye(3), balance=self.balance)
-        map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, self.D, np.eye(3), new_K, dim3, cv2.CV_16SC2)
+        self.new_K = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(scaled_K, self.D, dim2, np.eye(3), balance=self.balance)
+        map1, map2 = cv2.fisheye.initUndistortRectifyMap(scaled_K, self.D, np.eye(3), self.new_K, dim3, cv2.CV_16SC2)
         undistorted_img = cv2.remap(frame, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
         return undistorted_img
 
