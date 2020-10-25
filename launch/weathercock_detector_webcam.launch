@@ -11,5 +11,6 @@
     <param name="roe/max/x" value="2"/>
     <param name="roe/max/y" value="2"/>
     <param name="roe/max/t" value="3.14"/>
+    <param name="weathercock_stabilisation_time" value="30">
   </node>
 </launch>
