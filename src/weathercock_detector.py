@@ -20,7 +20,7 @@ class WeathercockDetectorNode:
     def __init__(self):
         cv2.setNumThreads(4)
         self.weathercock_id = 17
-        roe = rospy.get_param("~roe")
+        roe = rospy.get_param("~roe", {'min': {"x":1,"y":1,"t":1}, 'max': {"x":2,"y":2,"t":3.142}})
         self.roe_min = [roe["min"]["x"], roe["min"]["x"], roe["min"]["t"]]
         self.roe_max = [roe["max"]["x"], roe["max"]["y"], roe["max"]["t"]]
         self.d = Detector.Detector()
