@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>aruco_to_pose</name>
+  <version>0.0.0</version>
+  <description>Package that allow detecting aruco from a camera and outputting their position as pose</description>
+
+  <maintainer email="yanis@todo.todo">Yanis Mazouz</maintainer>
+
+  <license>MIT</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <exec_depend>usb_cam</exec_depend>
+  <exec_depend>raspicam_node</exec_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
+
+
+
+
+  <export>
+  </export>
+</package>
