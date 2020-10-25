@@ -5,10 +5,10 @@ import rospy
 from detection import Detector
 import sys
 import numpy as np
+import math
 
 from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
-from scipy.spatial.transform import Rotation
 
 
 class WeathercockDetectorNode:
@@ -41,8 +41,9 @@ class WeathercockDetectorNode:
                     break
 
     def is_in_roe(self, pose_msg):
-        r = Rotation.from_quat([pose_msg.orientation.x,pose_msg.orientation.y,pose_msg.orientation.z,pose_msg.orientation.w])
-        ego = [pose_msg.position.x, pose_msg.position.x, r.as_euler("xyz")[2]]
+        q = pose_msg.orientation
+        yaw = math.atan2(2.0 * (q.y * q.z + q.w * q.x), q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z)
+        ego = [pose_msg.position.x, pose_msg.position.x, yaw]
         for i in range(0, 3):
             if not (self.roe_min[i] <= ego[i] <= self.roe_max[i]):
                 return False
