@@ -1,0 +1,12 @@
+<launch>
+  <node type="republish" pkg="image_transport" name="republish_cam" output="log" args="raw in:=usb_cam/image_raw compressed out:=robot_camera/image_raw">
+  </node>
+  <node type="weathercock_detector.py" pkg="aruco_to_pose" name="weathercock_detector_node" output="screen">
+    <param name="roe/min/x" value="1"/>
+    <param name="roe/min/y" value="1"/>
+    <param name="roe/min/t" value="0"/>
+    <param name="roe/max/x" value="2"/>
+    <param name="roe/max/y" value="2"/>
+    <param name="roe/max/t" value="3.146"/>
+  </node>
+</launch>
