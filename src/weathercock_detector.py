@@ -21,7 +21,7 @@ class WeathercockDetectorNode:
     def __init__(self):
         cv2.setNumThreads(4)
         self.weathercock_id = 17
-        roe = rospy.get_param("~roe", {'min': {"x":1,"y":1,"t":1}, 'max': {"x":2,"y":2,"t":3.142}})
+        roe = rospy.get_param("~roe", {'min': {"x":-4,"y":-4,"t":-3.14}, 'max': {"x":4,"y":4,"t":6.292}})
         self.weathercock_stabilisation_time = rospy.get_param("~weathercock_stabilisation_time", 30)
         self.roe_min = [roe["min"]["x"], roe["min"]["x"], roe["min"]["t"]]
         self.roe_max = [roe["max"]["x"], roe["max"]["y"], roe["max"]["t"]]
@@ -29,8 +29,8 @@ class WeathercockDetectorNode:
         rospy.set_param('isWeathercockSouth', False)
         self.is_set = False
         # subscribed Topic
-        self.img_topic = "/robot_camera/image_raw/compressed"
-        self.remaining_time_topic = "remaining_time"
+        self.img_topic = "camera/image_raw/compressed"
+        self.remaining_time_topic = "/remaining_time"
         self.pose_subscriber = rospy.Subscriber("odom", Odometry, callback=self.callback, queue_size=1)
 
     def detect_weathercock_orientation(self, img):
@@ -38,9 +38,11 @@ class WeathercockDetectorNode:
         if ids is not None:
             for aruco_id, corner in zip(ids, corners):
                 if aruco_id[0] == self.weathercock_id:
-                    is_south = corner[0,0,1] > corner[0,3,1]
+                    is_south = corner[0, 0, 1] > corner[0, 3, 1]
                     self.is_set = True
                     rospy.set_param('isWeathercockSouth', bool(is_south))
+                    rospy.loginfo(f"weathercock detected {'South' if is_south else 'North'}")
+                    rospy.signal_shutdown("Process done")
                     break
 
     def is_in_roe(self, pose_msg):
