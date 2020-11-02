@@ -1,5 +1,5 @@
 <launch>
-  <node type="aruco_to_pose.py" pkg="aruco_to_pose" name="aruco_to_pose_node" output="screen">
-    <param name="calib_file" value="$(find aruco_to_pose)/src/resources/parameters_fisheye_pi.txt"/>
+  <node type="aruco_to_pose.py" pkg="aruco_to_pose" name="aruco_to_pose_node"  ns="campi" output="screen">
+    <param name="calib_file" value="$(find aruco_to_pose)/src/resources/parameters_fisheye_pi_simu.txt"/>
   </node>
 </launch>
