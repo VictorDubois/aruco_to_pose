@@ -16,6 +16,7 @@
     <param name="camera_id" value="$(arg camera_id)"/>
 
 <!--    <param name="camera_info_url" value="package://raspicam_node/camera_info/camerav2_1280x960.yaml"/>-->
+    <param name="camera_info_url" value="package://raspicam_node/camera_info/camera_pi_5MP.yaml"/>
     <param name="camera_name" value="$(arg camera_name)"/>
     <param name="image_width" value="2592"/>
     <param name="image_height" value="1944"/>
@@ -24,6 +25,7 @@
     <param name="shutter_speed" value="0"/>
   </node>
   <node type="aruco_to_pose.py" pkg="aruco_to_pose" name="aruco_to_pose_node" output="screen">
-    <param name="calib_file" value="$(find aruco_to_pose)/src/resources/parameters_fisheye_pi.txt"/>
+  <!--<param name="calib_file" value="$(find aruco_to_pose)/src/resources/parameters_fisheye_pi_5MP_scale.txt"/>-->
+  <param name="calib_file" value="$(find aruco_to_pose)/src/resources/parameters_fisheye_pi_hd.txt"/>
   </node>
 </launch>
