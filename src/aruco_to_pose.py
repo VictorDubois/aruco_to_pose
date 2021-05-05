@@ -31,10 +31,11 @@ class ArucoPublisherNode:
             self.robots_pose_pub.append(rospy.Publisher(f"/pose_robots/{i}", PoseStamped, queue_size=1))
 
         # subscribed Topic
-        self.img_subscriber = rospy.Subscriber("/camera/image_raw/compressed",
+        self.img_subscriber = rospy.Subscriber("/camera/image/compressed",
                                                CompressedImage, self.callback, queue_size=1)
 
     def core(self, distort):
+        rospy.logdebug("in core")
         self.f.grabbed_frame = distort
         cv2.setNumThreads(4)
         img = self.f.undistorted_scaled_frame()
@@ -42,11 +43,14 @@ class ArucoPublisherNode:
         poses = {}
 
         if ids is not None:
+            rospy.logdebug("aruco tag found!")
+            rospy.logdebug(ids)
             for aruco_id, corner in zip(ids, corners):
                 if aruco_id[0] in self.marker_sizes:
                     poses[aruco_id[0]] = self.d.find_marker_pose(corner, self.f.new_K, np.array([]), self.marker_sizes[aruco_id[0]])
 
         if self.image_pub_undistort.get_num_connections() > 0:
+            rospy.logdebug("Who wants my undistort?")
             img = cv2.aruco.drawDetectedMarkers(img, corners, ids)
             for pose in poses.values():
                 img = cv2.aruco.drawAxis(img, self.f.new_K, np.array([]), pose[0], pose[1], 0.4)
@@ -84,6 +88,7 @@ class ArucoPublisherNode:
         self.f.close()
 
     def callback(self, ros_data):
+        rospy.logdebug("Inside callback")
         np_arr = np.fromstring(ros_data.data, np.uint8)
         image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         self.core(image_np)
