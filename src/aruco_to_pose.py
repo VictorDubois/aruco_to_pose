@@ -11,10 +11,22 @@ from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import PoseStamped
 import numpy as np
 from scipy.spatial.transform import Rotation
+import threading
+import contextlib
+
+@contextlib.contextmanager
+def processing_lock(rospy, lock=threading.Lock()):
+    if not lock.acquire(blocking=False):
+        raise RuntimeError("locked")
+
+    rospy.loginfo("Got it!")
+    try:
+        yield lock
+    finally:
+        lock.release()
 
 class ArucoPublisherNode:
     def __init__(self):
-        self.counter_image_dropped = 0
         path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi.txt')
         rospy.loginfo(f"loading camera calibration from {path_calibration_camera}")
         self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=0.5)
@@ -88,16 +100,26 @@ class ArucoPublisherNode:
         self.f.close()
 
     def callback(self, ros_data):
-        if self.counter_image_dropped == 10:
-            rospy.loginfo("start frame")
-            rospy.logdebug("Inside callback")
-            np_arr = np.fromstring(ros_data.data, np.uint8)
-            image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-            self.core(image_np)
-            self.counter_image_dropped = 0
-            rospy.loginfo("end frame")
-        self.counter_image_dropped += 1
+        if rospy.Time.now() - ros_data.header.stamp > rospy.Duration.from_sec(0.2):
+            # In case we are lagging a lot
+            rospy.loginfo("Old image, dropped")
+            return
+        
+        thread = threading.Thread(target=self.process_image, args=[ros_data])
+        thread.start()
 
+    def process_image(self, ros_data):
+        try:
+            with processing_lock(rospy):
+                rospy.loginfo("start frame")
+                rospy.logdebug("Inside callback")
+                np_arr = np.fromstring(ros_data.data, np.uint8)
+                image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                self.core(image_np)
+                rospy.loginfo("end frame")
+        except Exception:
+            # Probably because a frame is already being processed
+            rospy.loginfo("locked")
 
 def main(args):
     """ Initializes and cleanup ros node """
