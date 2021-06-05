@@ -27,7 +27,7 @@ def processing_lock(rospy, lock=threading.Lock()):
 
 class ArucoPublisherNode:
     def __init__(self):
-        path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi.txt')
+        path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi_simu.txt')
         rospy.loginfo(f"loading camera calibration from {path_calibration_camera}")
         self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=0.5)
         self.d = Detector.Detector()
@@ -36,14 +36,14 @@ class ArucoPublisherNode:
         self.initialized = False
         self.marker_sizes = {0: 0.07, 1: 0.07, 2: 0.07, 3: 0.07, 4: 0.07, 5: 0.07, 6: 0.07, 7: 0.07, 8: 0.07, 9: 0.07,
                              10: 0.07, 42: 0.10}
-        self.image_pub_undistort = rospy.Publisher("/aruco_to_pose/debug/undistort/compressed",
+        self.image_pub_undistort = rospy.Publisher("aruco_to_pose/debug/undistort/compressed",
                                          CompressedImage, queue_size=1)
         self.robots_pose_pub = []
         for i in range(0, 11):
             self.robots_pose_pub.append(rospy.Publisher(f"/pose_robots/{i}", PoseStamped, queue_size=1))
 
         # subscribed Topic
-        self.img_subscriber = rospy.Subscriber("/camera/image/compressed",
+        self.img_subscriber = rospy.Subscriber("camera/image_raw/compressed",
                                                CompressedImage, self.callback, queue_size=1)
 
     def core(self, distort):
