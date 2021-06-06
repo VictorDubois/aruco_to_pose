@@ -17,11 +17,15 @@ class ArucoTFBroadcastNode:
         odom_frame = rospy.get_param("~odom_frame","odom")
         aruco_frame = rospy.get_param("~aruco_frame","aruco_link")
         self.base_link_name = rospy.get_namespace()[1:]+aruco_frame
-        self. odom_name = rospy.get_namespace()[1:]+odom_frame
-        aruco_id = rospy.get_param('krabby_aruco_id', 5)
-        rospy.Subscriber("/pose_robots/%s" % aruco_id,
-                         PoseStamped,
-                         self.callback_pose)
+        self.odom_name = rospy.get_namespace()[1:]+odom_frame
+        is_blue = rospy.get_param('isBlue', True)
+
+        # Subscribe to any aruco id of your own color
+        aruco_ids = range(6, 11)
+        if is_blue:
+            aruco_ids = range(1, 6)
+        for aruco_id in aruco_ids:
+            rospy.Subscriber("/pose_robots/%s" % aruco_id, PoseStamped, self.callback_pose)
 
     def callback_pose(self, msg):
         self.tf_listen.waitForTransform(self.base_link_name, self.odom_name, rospy.Time.now(), rospy.Duration(1.0))
