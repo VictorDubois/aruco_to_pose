@@ -6,10 +6,24 @@ from detection import Detector
 import sys
 import numpy as np
 import math
+import contextlib
+import threading
 
 from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Duration
+
+
+@contextlib.contextmanager
+def processing_lock(rospy, lock=threading.Lock()):
+    if not lock.acquire(blocking=False):
+        raise RuntimeError("locked")
+
+    #rospy.loginfo("Got it!")
+    try:
+        yield lock
+    finally:
+        lock.release()
 
 
 class WeathercockDetectorNode:
@@ -59,12 +73,27 @@ class WeathercockDetectorNode:
         return remaining_time_msg.data.to_sec() < 100 - self.weathercock_stabilisation_time
 
     def callback(self, ros_data):
-        if not self.is_set and self.is_in_roe(ros_data.pose.pose) and self.is_time_to_check():
-            img_msg = rospy.wait_for_message(self.img_topic, CompressedImage)
-            np_arr = np.fromstring(img_msg.data, np.uint8)
-            image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-            self.detect_weathercock_orientation(image_np)
+        #rospy.debug(self.is_time_to_check())
+        #rospy.debug(self.is_set)
+        #rospy.debug(self.is_in_roe(ros_data.pose.pose))
 
+        if not self.is_set and self.is_in_roe(ros_data.pose.pose) and self.is_time_to_check():
+            rospy.loginfo("It's time to check")
+            img_msg = rospy.wait_for_message(self.img_topic, CompressedImage)
+            thread = threading.Thread(target=self.process_image, args=[img_msg])
+            thread.start()
+
+    def process_image(self, img_msg):
+        try:
+            with processing_lock(rospy):
+                rospy.loginfo("start frame")
+                np_arr = np.fromstring(img_msg.data, np.uint8)
+                image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                self.detect_weathercock_orientation(image_np)
+                rospy.loginfo("end frame")
+        except Exception:
+            # Probably because a frame is already being processed
+            rospy.loginfo("locked")
 
 def main(args):
     """ Initializes and cleanup ros node """
