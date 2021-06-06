@@ -19,7 +19,7 @@ def processing_lock(rospy, lock=threading.Lock()):
     if not lock.acquire(blocking=False):
         raise RuntimeError("locked")
 
-    rospy.loginfo("Got it!")
+    #rospy.loginfo("Got it!")
     try:
         yield lock
     finally:
@@ -46,7 +46,7 @@ class ArucoPublisherNode:
         self.img_subscriber = rospy.Subscriber("camera/image_raw/compressed",
                                                CompressedImage, self.callback, queue_size=1)
 
-    def core(self, distort):
+    def core(self, distort, timestamp):
         rospy.logdebug("in core")
         self.f.grabbed_frame = distort
         cv2.setNumThreads(4)
@@ -85,7 +85,7 @@ class ArucoPublisherNode:
             if aruco_id < 11:
                 pose_msg = PoseStamped()
                 pose_msg.header.frame_id = "aruco"
-                pose_msg.header.stamp = rospy.Time.now()
+                pose_msg.header.stamp = timestamp
                 pose_msg.pose.position.x = translation[0][0]
                 pose_msg.pose.position.y = translation[1][0]
                 pose_msg.pose.position.z = translation[2][0]
@@ -104,19 +104,19 @@ class ArucoPublisherNode:
             # In case we are lagging a lot
             rospy.loginfo("Old image, dropped")
             return
-        
+
         thread = threading.Thread(target=self.process_image, args=[ros_data])
         thread.start()
 
     def process_image(self, ros_data):
         try:
             with processing_lock(rospy):
-                rospy.loginfo("start frame")
-                rospy.logdebug("Inside callback")
+                #rospy.loginfo("start frame")
+                #rospy.logdebug("Inside callback")
                 np_arr = np.fromstring(ros_data.data, np.uint8)
                 image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-                self.core(image_np)
-                rospy.loginfo("end frame")
+                self.core(image_np, ros_data.header.stamp)
+                #rospy.loginfo("end frame")
         except Exception:
             # Probably because a frame is already being processed
             rospy.loginfo("locked")
