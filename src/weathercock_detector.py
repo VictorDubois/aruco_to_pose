@@ -11,6 +11,7 @@ import threading
 
 from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Pose
 from std_msgs.msg import Duration
 
 
@@ -45,7 +46,17 @@ class WeathercockDetectorNode:
         # subscribed Topic
         self.img_topic = "camera/image_raw/compressed"
         self.remaining_time_topic = "/remaining_time"
-        self.pose_subscriber = rospy.Subscriber("odom", Odometry, callback=self.callback, queue_size=1)
+        self.pose_subscriber = rospy.Subscriber("odom", Odometry, callback=self.update_pose, queue_size=1)
+        self.time_subscriber = rospy.Subscriber(self.remaining_time_topic, Duration, callback=self.update_rem_time, queue_size=1)
+        self.image_subscriber = rospy.Subscriber(self.img_topic, CompressedImage, callback=self.callback, queue_size=1)
+        self.remaining_time = rospy.Time.from_sec(100)
+        self.pose = Pose()
+
+    def update_pose(self, ros_data):
+        self.pose = ros_data.pose.pose
+
+    def update_rem_time(self, ros_data):
+        self.remaining_time = ros_data.data
 
     def detect_weathercock_orientation(self, img):
         corners, ids = self.d.detect(img)
@@ -56,6 +67,7 @@ class WeathercockDetectorNode:
                     self.is_set = True
                     rospy.set_param('isWeathercockSouth', bool(is_south))
                     rospy.loginfo(f"weathercock detected {'South' if is_south else 'North'}")
+                    cv2.imwrite('/tmp/log/weathercock_picture.png', img)
                     rospy.signal_shutdown("Process done")
                     break
 
@@ -69,28 +81,26 @@ class WeathercockDetectorNode:
         return True
 
     def is_time_to_check(self):
-        remaining_time_msg = rospy.wait_for_message(self.remaining_time_topic, Duration)
-        return remaining_time_msg.data.to_sec() < 100 - self.weathercock_stabilisation_time
+        return self.remaining_time.to_sec() < 100 - self.weathercock_stabilisation_time
 
-    def callback(self, ros_data):
-        #rospy.debug(self.is_time_to_check())
-        #rospy.debug(self.is_set)
-        #rospy.debug(self.is_in_roe(ros_data.pose.pose))
+    def callback(self, img_msg):
+        rospy.logdebug(self.is_time_to_check())
+        rospy.logdebug(self.is_set)
+        rospy.logdebug(self.is_in_roe(self.pose))
 
-        if not self.is_set and self.is_in_roe(ros_data.pose.pose) and self.is_time_to_check():
-            rospy.loginfo("It's time to check")
-            img_msg = rospy.wait_for_message(self.img_topic, CompressedImage)
+        if not self.is_set and self.is_in_roe(self.pose) and self.is_time_to_check():
+            rospy.logdebug("It's time to check")
             thread = threading.Thread(target=self.process_image, args=[img_msg])
             thread.start()
 
     def process_image(self, img_msg):
         try:
             with processing_lock(rospy):
-                rospy.loginfo("start frame")
+                rospy.logdebug("start frame")
                 np_arr = np.fromstring(img_msg.data, np.uint8)
                 image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
                 self.detect_weathercock_orientation(image_np)
-                rospy.loginfo("end frame")
+                rospy.logdebug("end frame")
         except Exception:
             # Probably because a frame is already being processed
             rospy.loginfo("locked")
