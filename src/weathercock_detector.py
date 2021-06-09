@@ -67,7 +67,7 @@ class WeathercockDetectorNode:
                     self.is_set = True
                     rospy.set_param('isWeathercockSouth', bool(is_south))
                     rospy.loginfo(f"weathercock detected {'South' if is_south else 'North'}")
-                    cv2.imwrite('/tmp/log/weathercock_picture.png', img)
+                    cv2.imwrite('/tmp/weathercock_picture.png', img)
                     rospy.signal_shutdown("Process done")
                     break
 
