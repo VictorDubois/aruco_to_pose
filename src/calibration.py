@@ -44,6 +44,10 @@ def calibrate(input_folder, output_file):
     print("Found " + str(N_OK) + " valid images for calibration")
     print("DIM=" + str(_img_shape[::-1]))
 
+    if N_OK == 0:
+        print("Error, no valid image found. Please check pattern. It is the number of intersections that is used, not the number of squares")
+        return
+
 
     rms, _, _, _, _ = \
         cv2.fisheye.calibrate(
