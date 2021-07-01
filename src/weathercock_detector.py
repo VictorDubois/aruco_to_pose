@@ -44,7 +44,7 @@ class WeathercockDetectorNode:
         rospy.set_param('isWeathercockSouth', False)
         self.is_set = False
         # subscribed Topic
-        self.img_topic = "camera/image_raw/compressed"
+        self.img_topic = "robot_camera/image_raw/compressed"
         self.remaining_time_topic = "/remaining_time"
         self.pose_subscriber = rospy.Subscriber("odom", Odometry, callback=self.update_pose, queue_size=1)
         self.time_subscriber = rospy.Subscriber(self.remaining_time_topic, Duration, callback=self.update_rem_time, queue_size=1)
@@ -96,7 +96,7 @@ class WeathercockDetectorNode:
     def process_image(self, img_msg):
         try:
             with processing_lock(rospy):
-                rospy.logdebug("start frame")
+                rospy.logwarning("start frame")
                 np_arr = np.fromstring(img_msg.data, np.uint8)
                 image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
                 self.detect_weathercock_orientation(image_np)
