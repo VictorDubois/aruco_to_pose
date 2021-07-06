@@ -82,6 +82,8 @@ class WeathercockDetectorNode:
                     break
 
     def is_in_roe(self, pose_msg):
+        return True
+
         q = pose_msg.orientation
         yaw = math.atan2(2.0 * (q.y * q.z + q.w * q.x), q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z)
         ego = [pose_msg.position.x, pose_msg.position.x, yaw]
