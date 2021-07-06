@@ -10,6 +10,7 @@ import contextlib
 import threading
 
 from sensor_msgs.msg import CompressedImage
+from std_msgs.msg import Int32
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Pose
 from std_msgs.msg import Duration
@@ -46,11 +47,14 @@ class WeathercockDetectorNode:
         # subscribed Topic
         self.img_topic = "robot_camera/image_raw/compressed"
         self.remaining_time_topic = "/remaining_time"
+        self.weathercock_state_topic = "weathercock_state"
         self.pose_subscriber = rospy.Subscriber("odom", Odometry, callback=self.update_pose, queue_size=1)
         self.time_subscriber = rospy.Subscriber(self.remaining_time_topic, Duration, callback=self.update_rem_time, queue_size=1)
         self.image_subscriber = rospy.Subscriber(self.img_topic, CompressedImage, callback=self.callback, queue_size=1)
+        self.weathercock_publisher = rospy.Publisher(self.weathercock_state_topic, Int32, queue_size=1)
         self.remaining_time = rospy.Time.from_sec(100)
         self.pose = Pose()
+        self.weathercock_publisher.publish(Int32(0)) # Not detected
 
     def update_pose(self, ros_data):
         self.pose = ros_data.pose.pose
@@ -66,6 +70,12 @@ class WeathercockDetectorNode:
                     is_south = corner[0, 0, 1] > corner[0, 3, 1]
                     self.is_set = True
                     rospy.set_param('isWeathercockSouth', bool(is_south))
+
+                    if is_south:
+                        self.weathercock_publisher.publish(Int32(1)) # South
+                    else:
+                        self.weathercock_publisher.publish(Int32(2)) # North
+
                     rospy.loginfo(f"weathercock detected {'South' if is_south else 'North'}")
                     cv2.imwrite('/tmp/weathercock_picture.png', img)
                     rospy.signal_shutdown("Process done")
