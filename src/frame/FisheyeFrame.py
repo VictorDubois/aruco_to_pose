@@ -14,7 +14,7 @@ class FisheyeFrame(Frame):
 
     def init_map(self):
         if self.K is not None and self.D is not None:
-            self.new_K, _ = cv2.getOptimalNewCameraMatrix(self.K, self.D, self.frame_size, self.balance,
+            self.new_K, _ = cv2.getOptimalNewCameraMatrix(self.K, self.D, self.frame_size, 1,
                                                           centerPrincipalPoint=True)
             self.map1, self.map2 = cv2.fisheye.initUndistortRectifyMap(self.K, self.D, np.eye(3), self.new_K, self.frame_size,
                                                              cv2.CV_16SC2)
