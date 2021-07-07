@@ -108,7 +108,7 @@ class WeathercockDetectorNode:
     def process_image(self, img_msg):
         try:
             with processing_lock(rospy):
-                rospy.logwarning("start frame")
+                rospy.logdebug("start frame")
                 np_arr = np.fromstring(img_msg.data, np.uint8)
                 image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
                 self.detect_weathercock_orientation(image_np)
