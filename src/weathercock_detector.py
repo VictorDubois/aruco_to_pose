@@ -88,7 +88,8 @@ class WeathercockDetectorNode:
         rospy.logdebug(self.is_set)
         rospy.logdebug(self.is_in_roe(self.pose))
 
-        if not self.is_set and self.is_in_roe(self.pose) and self.is_time_to_check():
+        #if not self.is_set and self.is_in_roe(self.pose) and self.is_time_to_check():
+        if not self.is_set and self.is_time_to_check():
             rospy.logdebug("It's time to check")
             thread = threading.Thread(target=self.process_image, args=[img_msg])
             thread.start()
@@ -96,14 +97,15 @@ class WeathercockDetectorNode:
     def process_image(self, img_msg):
         try:
             with processing_lock(rospy):
-                rospy.logwarning("start frame")
+                rospy.logwarn("start frame")
                 np_arr = np.fromstring(img_msg.data, np.uint8)
                 image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
                 self.detect_weathercock_orientation(image_np)
                 rospy.logdebug("end frame")
-        except Exception:
+        except Exception as inst:
             # Probably because a frame is already being processed
-            rospy.loginfo("locked")
+            rospy.logwarn(inst)
+            rospy.logdebug("locked")
 
 def main(args):
     """ Initializes and cleanup ros node """
