@@ -43,7 +43,7 @@ class ArucoPublisherNode:
             self.robots_pose_pub.append(rospy.Publisher(f"/pose_robots/{i}", PoseStamped, queue_size=1))
 
         # subscribed Topic
-        self.img_subscriber = rospy.Subscriber("camera/image_raw/compressed",
+        self.img_subscriber = rospy.Subscriber("camera/image/compressed",
                                                CompressedImage, self.callback, queue_size=1)
 
     def core(self, distort, timestamp):
