@@ -27,7 +27,8 @@ def processing_lock(rospy, lock=threading.Lock()):
 
 class ArucoPublisherNode:
     def __init__(self):
-        path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi_simu.txt')
+        #path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi_simu.txt')
+        path_calibration_camera = "/home/vdubois/campi_opencv.yaml"
         rospy.loginfo(f"loading camera calibration from {path_calibration_camera}")
         self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=0.5)
         self.d = Detector.Detector()
@@ -51,6 +52,7 @@ class ArucoPublisherNode:
         self.f.grabbed_frame = distort
         cv2.setNumThreads(4)
         img = self.f.undistorted_scaled_frame()
+        #img = distort
         corners, ids = self.d.detect(img)
         poses = {}
 
@@ -104,6 +106,8 @@ class ArucoPublisherNode:
             # In case we are lagging a lot
             rospy.loginfo("Old image, dropped")
             return
+        #with open("/tmp/image_debug", "w") as output_file:
+        #    output_file.write(ros_data.)
 
         thread = threading.Thread(target=self.process_image, args=[ros_data])
         thread.start()
@@ -111,12 +115,12 @@ class ArucoPublisherNode:
     def process_image(self, ros_data):
         try:
             with processing_lock(rospy):
-                #rospy.loginfo("start frame")
+                rospy.loginfo("start frame")
                 #rospy.logdebug("Inside callback")
                 np_arr = np.fromstring(ros_data.data, np.uint8)
                 image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
                 self.core(image_np, ros_data.header.stamp)
-                #rospy.loginfo("end frame")
+                rospy.loginfo("end frame")
         except Exception:
             # Probably because a frame is already being processed
             rospy.loginfo("locked")

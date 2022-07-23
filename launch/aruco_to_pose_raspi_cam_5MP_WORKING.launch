@@ -23,6 +23,6 @@
     <param name="shutter_speed" value="0"/>
   </node>
   <node type="aruco_to_pose.py" pkg="aruco_to_pose" name="aruco_to_pose_node" output="screen">
-    <param name="calib_file" value="/home/ubuntu/campi_opencv.yaml"/>
+    <param name="calib_file" value="/home/vdubois/campi_opencv.yaml"/>
   </node>
 </launch>

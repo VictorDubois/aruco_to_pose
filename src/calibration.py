@@ -11,8 +11,8 @@ def calibrate(input_folder, output_file):
     :param input_folder : folder containing the images to be used for the calibration
     :param output_file : path where to write the krabby calibration file
     """
-    cv2.setNumThreads(4)
-    CHECKERBOARD = (7,9)
+    cv2.setNumThreads(7)
+    CHECKERBOARD = (6,8)
     subpix_criteria = (cv2.TERM_CRITERIA_EPS+cv2.TERM_CRITERIA_MAX_ITER, 30, 0.1)
     calibration_flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC+cv2.fisheye.CALIB_CHECK_COND+cv2.fisheye.CALIB_FIX_SKEW
     objp = np.zeros((1, CHECKERBOARD[0]*CHECKERBOARD[1], 3), np.float32)

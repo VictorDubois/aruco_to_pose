@@ -3,5 +3,6 @@
     <param name="calib_file" value="$(find aruco_to_pose)/src/resources/parameters_fisheye_pi_simu.txt"/>
   </node>
 
-  <node type="robot_tf_broadcaster.py" pkg="aruco_to_pose" name="aruco_tf_broadcaster" ns="krabby" output="screen"/>
+<node pkg="tf" type="static_transform_publisher" name="map_aruco_link" args="0 -0.15 0 0 0 0 map aruco 100" />
+  <!--<node type="robot_tf_broadcaster.py" pkg="aruco_to_pose" name="aruco_tf_broadcaster" ns="krabby" output="screen"/>-->
 </launch>
