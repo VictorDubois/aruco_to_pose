@@ -1,13 +1,13 @@
-#!/usr/bin/env python3
-
+#!/usr/bin/env python
+import rospy
 from frame import FisheyeFrame
 from detection import Detector
 from coordinate import Transforms
 import sys
 
 import cv2
-import rospy
 from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import Image
 from geometry_msgs.msg import PoseStamped
 import numpy as np
 from scipy.spatial.transform import Rotation
@@ -27,7 +27,7 @@ def processing_lock(rospy, lock=threading.Lock()):
 
 class ArucoPublisherNode:
     def __init__(self):
-        path_calibration_camera = rospy.get_param("~calib_file", 'resources/parameters_fisheye_pi_simu.txt')
+        path_calibration_camera = rospy.get_param("~calib_file", 'resources/calib.out')
         rospy.loginfo(f"loading camera calibration from {path_calibration_camera}")
         self.f = FisheyeFrame.FisheyeFrame(id_=0, parameters=path_calibration_camera, balance=0.5)
         self.d = Detector.Detector()
@@ -45,21 +45,34 @@ class ArucoPublisherNode:
         # subscribed Topic
         self.img_subscriber = rospy.Subscriber("camera/image/compressed",
                                                CompressedImage, self.callback, queue_size=1)
+        #self.img_subscriber = rospy.Subscriber("camera/image",
+        #                                       Image, self.callback, queue_size=1)
 
     def core(self, distort, timestamp):
         rospy.logdebug("in core")
         self.f.grabbed_frame = distort
         cv2.setNumThreads(4)
+        rospy.loginfo("before undistort")
+        rospy.loginfo("before undistort")
         img = self.f.undistorted_scaled_frame()
+        rospy.loginfo("after undistort")
+        rospy.loginfo("after undistort")
         corners, ids = self.d.detect(img)
+        rospy.loginfo("after detect makers")
+        rospy.loginfo("after detect makers")
         poses = {}
 
         if ids is not None:
+            rospy.logdebug("aruco tag found!")
             rospy.logdebug("aruco tag found!")
             rospy.logdebug(ids)
             for aruco_id, corner in zip(ids, corners):
                 if aruco_id[0] in self.marker_sizes:
                     poses[aruco_id[0]] = self.d.find_marker_pose(corner, self.f.new_K, np.array([]), self.marker_sizes[aruco_id[0]])
+                    rospy.loginfo("after find_maker_pose of " + str(aruco_id[0]))
+                    rospy.loginfo("after find_maker_pose of " + str(aruco_id[0]))
+            rospy.loginfo("after find_maker_pose")
+            rospy.loginfo("after find_maker_pose")
 
         if self.image_pub_undistort.get_num_connections() > 0:
             rospy.logdebug("Who wants my undistort?")
@@ -103,7 +116,7 @@ class ArucoPublisherNode:
         if rospy.Time.now() - ros_data.header.stamp > rospy.Duration.from_sec(0.2):
             # In case we are lagging a lot
             rospy.loginfo("Old image, dropped")
-            return
+            #return
 
         thread = threading.Thread(target=self.process_image, args=[ros_data])
         thread.start()
@@ -113,8 +126,11 @@ class ArucoPublisherNode:
             with processing_lock(rospy):
                 #rospy.loginfo("start frame")
                 #rospy.logdebug("Inside callback")
+                rospy.loginfo("start frame")
                 np_arr = np.fromstring(ros_data.data, np.uint8)
+                rospy.loginfo("after fromstring")
                 image_np = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+                rospy.loginfo("after imdecode")
                 self.core(image_np, ros_data.header.stamp)
                 #rospy.loginfo("end frame")
         except Exception:
