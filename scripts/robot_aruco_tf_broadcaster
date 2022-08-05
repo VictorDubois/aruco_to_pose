@@ -1,0 +1,10 @@
+#! /usr/bin/env python
+import sys
+
+import aruco_to_pose.src.robot_tf_broadcaster as tf_bc
+
+if __name__ == '__main__':
+    print(tf_bc)
+    print(tf_bc.__path__)
+
+    tf_bc.main(sys.argv)

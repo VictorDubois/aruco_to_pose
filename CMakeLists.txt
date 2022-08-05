@@ -11,9 +11,8 @@ include_directories(
 )
 
 catkin_install_python(PROGRAMS
-  src/aruco_to_pose.py
-  src/weathercock_detector.py
-  src/robot_tf_broadcaster.py
+  scripts/aruco_to_pose
+  scripts/robot_aruco_tf_broadcaster
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

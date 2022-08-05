@@ -14,8 +14,8 @@ class ArucoTFBroadcastNode:
     def __init__(self):
         self.tf_broadcast = tf.TransformBroadcaster()
         self.tf_listen = tf.TransformListener()
-        odom_frame = rospy.get_param("~odom_frame","odom")
-        aruco_frame = rospy.get_param("~aruco_frame","aruco_link")
+        odom_frame = rospy.get_param("~odom_frame", "odom")
+        aruco_frame = rospy.get_param("~aruco_frame", "aruco_link")
         self.base_link_name = rospy.get_namespace()[1:]+aruco_frame
         self.odom_name = rospy.get_namespace()[1:]+odom_frame
         is_blue = rospy.get_param('isBlue', True)
@@ -31,10 +31,15 @@ class ArucoTFBroadcastNode:
         self.tf_listen.waitForTransform(self.base_link_name, self.odom_name, rospy.Time.now(), rospy.Duration(1.0))
         position, quaternion = self.tf_listen.lookupTransform(self.base_link_name, self.odom_name, rospy.Time(0))
 
-        odom_to_baselink = tf.transformations.concatenate_matrices(tf.transformations.translation_matrix(position), tf.transformations.quaternion_matrix(quaternion))
+        odom_to_baselink = tf.transformations.concatenate_matrices(tf.transformations.translation_matrix(position),
+                                                                   tf.transformations.quaternion_matrix(quaternion))
         baselink_in_aruco_p = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
-        baselink_in_aruco_q = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-        baselink_to_aruco = tf.transformations.concatenate_matrices(tf.transformations.translation_matrix(baselink_in_aruco_p), tf.transformations.quaternion_matrix(baselink_in_aruco_q))
+        baselink_in_aruco_q = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z,
+                                        msg.pose.orientation.w])
+        baselink_to_aruco = tf.transformations.concatenate_matrices(tf.transformations.
+                                                                    translation_matrix(baselink_in_aruco_p),
+                                                                    tf.transformations.
+                                                                    quaternion_matrix(baselink_in_aruco_q))
 
         odom_to_aruco = tf.transformations.concatenate_matrices(odom_to_baselink, baselink_to_aruco)
 
